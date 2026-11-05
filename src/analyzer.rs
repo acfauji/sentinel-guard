@@ -191,10 +191,8 @@ pub fn analyze(action: &AgentAction) -> RiskVerdict {
     let lower_target = action.target.to_ascii_lowercase();
     let mut best: Option<(&str, Severity, &str)> = None;
     for (pat, sev, reason) in SECRET_PATTERNS {
-        if lower_target.contains(pat) {
-            if best.is_none() || pat.len() > best.unwrap().0.len() {
-                best = Some((pat, *sev, reason));
-            }
+        if lower_target.contains(pat) && (best.is_none() || pat.len() > best.unwrap().0.len()) {
+            best = Some((pat, *sev, reason));
         }
     }
     if let Some((pat, sev, reason)) = best {
