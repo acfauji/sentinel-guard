@@ -2,11 +2,11 @@
 
 **Security-first AI-agent governance.** The bouncer for your coding agents.
 
-Inspect what an agent is about to do, understand the *risk* of each action, block prompt injection before it poisons the agent, and keep a tamper-evident record of everything.
+Inspect what an agent is about to do, understand the risk of each action, block prompt injection before it poisons the agent, and keep a tamper-evident record of everything.
 
 ## Why it exists
 
-Existing agent monitors show you *Allow/Deny* — but never tell you **why** an action is risky, never check whether the agent is being steered by a malicious file or webpage, and never **contain** a dangerous action. SENTINEL-GUARD is the *guard*, not just the *watch*.
+Most agent monitors give you Allow/Deny and stop there. They don't tell you why an action is risky, they don't check whether the agent is being steered by a malicious file or webpage, and they don't contain dangerous actions. SENTINEL-GUARD does all three: risk analysis with reasons, prompt-injection scanning, and a sandbox/deny decision. Plus a hash-chained audit log so you can prove what happened later.
 
 ## Core modules
 
@@ -81,14 +81,14 @@ cat agent_actions.jsonl | ./target/release/sentinel-guard watch --stop-on-deny
 | `High` | Dangerous or injection-indicator present | Sandbox |
 | `Critical` | Credential access, destructive command, or critical injection | Deny |
 
-> **Note on `Sandbox`:** The `Sandbox` decision is a *label* — SENTINEL-GUARD does not perform actual OS-level isolation (containers, seccomp, chroot). It signals to the caller that the action should be routed through a sandboxed execution environment before proceeding. The caller is responsible for enforcing the sandbox.
+> **Note on `Sandbox`:** The `Sandbox` decision is a *label*. SENTINEL-GUARD does not perform actual OS-level isolation (containers, seccomp, chroot). It signals to the caller that the action should be routed through a sandboxed execution environment before proceeding. The caller is responsible for enforcing the sandbox.
 
 ## Security model
 
 - **Local-first** — no telemetry, no account, nothing leaves your machine.
 - **Hash-chained ledger** — each entry commits to the previous via SHA-256, so retroactive tampering is detectable.
 - **Defense in depth** — risk analysis + injection shield + sandbox decision.
-- **Free-tier friendly** — deterministic rules always work offline; no paid API required.
+- **Offline** — deterministic rules always work; no paid API required.
 - **Fail-closed** — unrecognized actions default to Medium (caution), not Low.
 
 ## Threat model

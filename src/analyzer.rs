@@ -187,7 +187,7 @@ pub fn analyze(action: &AgentAction) -> RiskVerdict {
         }
     }
 
-    // Secret paths — pick the most specific (longest) matching pattern.
+    // Secret paths - pick the most specific (longest) matching pattern.
     let lower_target = action.target.to_ascii_lowercase();
     let mut best: Option<(&str, Severity, &str)> = None;
     for (pat, sev, reason) in SECRET_PATTERNS {

@@ -42,7 +42,7 @@ SENTINEL-GUARD is a local-first security tool that monitors AI-agent actions for
 
 ### T4: Audit log tampering
 - **Attack:** Attacker modifies historical audit entries to hide malicious actions.
-- **Mitigation:** `ledger.rs` uses SHA-256 hash chaining — each entry includes the hash of the previous entry. `ledger verify` detects any modification.
+- **Mitigation:** `ledger.rs` uses SHA-256 hash chaining. Each entry includes the hash of the previous entry. `ledger verify` detects any modification.
 - **Residual risk:** If the attacker controls the machine, they can regenerate the entire chain. Mitigation: store ledger on append-only media or remote.
 
 ### T5: Unknown/unrecognized actions
