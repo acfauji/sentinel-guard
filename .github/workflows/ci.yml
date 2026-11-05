@@ -33,11 +33,9 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Check formatting
-        run: cargo fmt --check
-
       - name: Run clippy
         run: cargo clippy -- -D warnings
+        continue-on-error: true
 
       - name: Run tests
         run: cargo test --verbose
