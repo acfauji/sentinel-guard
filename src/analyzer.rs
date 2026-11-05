@@ -43,7 +43,6 @@ const SECRET_PATTERNS: &[(&str, Severity, &str)] = &[
     (".key", Severity::High, "Key file accessed"),
     (".p12", Severity::High, "PKCS12 certificate accessed"),
     (".pfx", Severity::High, "PKCS12 certificate accessed"),
-    ("kubeconfig", Severity::High, "Kubernetes kubeconfig accessed"),
     (".vault-token", Severity::Critical, "Vault token accessed"),
     ("vault-token", Severity::Critical, "Vault token accessed"),
 ];
@@ -113,7 +112,6 @@ const SAFE_PATTERNS: &[(&str, &str)] = &[
     ("git status", "repo status"),
     ("git diff", "diff inspection"),
     ("ls ", "listing"),
-    ("ls", "listing"),
 ];
 
 /// Paths we consider benign to only *read* (not write/delete).

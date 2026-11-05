@@ -89,8 +89,8 @@ cat agent_actions.jsonl | ./target/release/sentinel-guard watch
 
 Output:
 ```
-[read_file] README.md | severity=LOW | reason='reading documentation' | injection=
-[read_file] /home/user/.ssh/id_rsa | severity=CRITICAL | reason='SSH private key accessed' | injection=
+[read_file] README.md | decision=ALLOW | severity=LOW | reason='allowed' | injection=
+[read_file] /home/user/.ssh/id_rsa | decision=DENY | severity=CRITICAL | reason='blocked: critical or injection risk' | injection=
 [ledger] verified: 2 entries intact
 ```
 

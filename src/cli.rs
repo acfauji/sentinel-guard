@@ -156,7 +156,7 @@ fn run_shield(input: Option<String>) -> Result<()> {
         println!("clean (no injection patterns)");
     } else {
         for f in findings {
-            println!("{:?} | {}", f.severity, f.pattern);
+            println!("{} | {}", f.severity.label(), f.pattern);
         }
     }
     Ok(())

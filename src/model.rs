@@ -45,5 +45,3 @@ pub struct RiskVerdict {
     #[serde(default)]
     pub indicators: Vec<String>,
 }
-
-// LedgerEntry is defined in ledger.rs (single source of truth).

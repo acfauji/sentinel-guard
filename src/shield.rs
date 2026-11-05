@@ -101,9 +101,19 @@ pub fn scan(text: &str) -> Vec<InjectionFinding> {
     let mut findings = Vec::new();
     for (pat, sev, desc) in INJECTION_PATTERNS {
         if let Some(pos) = lower.find(pat) {
-            let start = pos.saturating_sub(10);
-            let end = (pos + pat.len() + 10).min(lower.len());
-            let sample = lower[start..end].lines().next().unwrap_or("").to_string();
+            // Find safe char boundaries (avoid panics on multi-byte UTF-8)
+            let start = (0..pos)
+                .rev()
+                .find(|&i| lower.is_char_boundary(i) && pos - i >= 10)
+                .unwrap_or(0);
+            let end_raw = (pos + pat.len() + 10).min(lower.len());
+            let end = (end_raw..=lower.len())
+                .find(|&i| lower.is_char_boundary(i))
+                .unwrap_or(lower.len());
+            let sample = lower.get(start..end)
+                .and_then(|s| s.lines().next())
+                .unwrap_or("")
+                .to_string();
             findings.push(InjectionFinding {
                 severity: *sev,
                 pattern: desc.to_string(),
