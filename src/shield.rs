@@ -102,8 +102,8 @@ pub fn scan(text: &str) -> Vec<InjectionFinding> {
     for (pat, sev, desc) in INJECTION_PATTERNS {
         if let Some(pos) = lower.find(pat) {
             let start = pos.saturating_sub(10);
-            let end = (pos + pat.len() + 10).min(text.len());
-            let sample = text[start..end].lines().next().unwrap_or("").to_string();
+            let end = (pos + pat.len() + 10).min(lower.len());
+            let sample = lower[start..end].lines().next().unwrap_or("").to_string();
             findings.push(InjectionFinding {
                 severity: *sev,
                 pattern: desc.to_string(),

@@ -37,7 +37,7 @@ pub struct DecisionResult {
 /// Decide whether to allow, deny, or sandbox an action.
 pub fn evaluate(action: &AgentAction) -> DecisionResult {
     let verdict = analyze(action);
-    let findings = scan(&format!("{} {}", action.target, action.content));
+    let findings = scan(&format!("{} {} {}", action.kind, action.target, action.content));
     let max_inj = max_severity(&findings);
 
     let (decision, reason) = if verdict.severity == Severity::Critical

@@ -201,8 +201,15 @@ fn run_ledger_append(file: &str, action: &str) {
     let verdict = evaluate(&action);
     l.append(action, verdict.verdict);
     let out = serde_json::to_string_pretty(&l.entries()).unwrap();
-    if let Err(e) = fs::write(file, out) {
+    // Atomic write: write to temp file, then rename
+    let tmp_path = format!("{}.tmp", file);
+    if let Err(e) = fs::write(&tmp_path, &out) {
         eprintln!("write ledger file: {}", e);
+        std::process::exit(1);
+    }
+    if let Err(e) = fs::rename(&tmp_path, file) {
+        eprintln!("rename ledger file: {}", e);
+        let _ = fs::remove_file(&tmp_path);
         std::process::exit(1);
     }
     println!("appended");

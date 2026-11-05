@@ -96,20 +96,19 @@ impl LedgerEntry {
         verdict: &RiskVerdict,
         prev_hash: &str,
     ) -> String {
-        let payload = format!(
-            "{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}",
-            index,
-            timestamp,
-            action.kind,
-            action.target,
-            action.content,
-            action.agent,
-            verdict.severity.label(),
-            verdict.reason,
-            verdict.indicators.len(),
-            verdict.indicators.join(","),
-            prev_hash
-        );
+        let payload = serde_json::json!({
+            "index": index,
+            "timestamp": timestamp,
+            "kind": action.kind,
+            "target": action.target,
+            "content": action.content,
+            "agent": action.agent,
+            "severity": verdict.severity.label(),
+            "reason": verdict.reason,
+            "indicators": verdict.indicators,
+            "prev_hash": prev_hash,
+        });
+        let payload = serde_json::to_string(&payload).unwrap();
         let mut hasher = Sha256::new();
         hasher.update(payload.as_bytes());
         format!("{:x}", hasher.finalize())
