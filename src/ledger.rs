@@ -108,7 +108,7 @@ impl LedgerEntry {
             "indicators": verdict.indicators,
             "prev_hash": prev_hash,
         });
-        let payload = serde_json::to_string(&payload).unwrap();
+        let payload = serde_json::to_string(&payload).unwrap_or_else(|_| "{}".to_string());
         let mut hasher = Sha256::new();
         hasher.update(payload.as_bytes());
         format!("{:x}", hasher.finalize())
@@ -120,7 +120,6 @@ pub enum VerifyError {
     HashMismatch(u64),
     ChainMismatch(u64),
     OutOfOrder(u64),
-    EmptyLedger,
 }
 
 impl std::fmt::Display for VerifyError {
@@ -129,36 +128,11 @@ impl std::fmt::Display for VerifyError {
             VerifyError::HashMismatch(i) => write!(f, "hash mismatch at entry {}", i),
             VerifyError::ChainMismatch(i) => write!(f, "chain mismatch at entry {}", i),
             VerifyError::OutOfOrder(i) => write!(f, "entries out of order at index {}", i),
-            VerifyError::EmptyLedger => write!(f, "ledger is empty"),
         }
     }
 }
 
 impl std::error::Error for VerifyError {}
-
-/// Serialize all entries as JSONL (one JSON object per line).
-pub fn to_jsonl(entries: &[LedgerEntry]) -> String {
-    let mut out = String::new();
-    for e in entries {
-        out.push_str(&serde_json::to_string(e).unwrap());
-        out.push('\n');
-    }
-    out
-}
-
-/// Parse JSONL back into entries.
-pub fn from_jsonl(text: &str) -> Vec<LedgerEntry> {
-    let mut out = Vec::new();
-    for line in text.lines() {
-        if line.trim().is_empty() {
-            continue;
-        }
-        if let Ok(e) = serde_json::from_str(line) {
-            out.push(e);
-        }
-    }
-    out
-}
 
 #[cfg(test)]
 mod tests {
@@ -206,18 +180,4 @@ mod tests {
         assert!(l.verify().is_ok());
     }
 
-    #[test]
-    fn jsonl_roundtrip() {
-        let mut l = Ledger::new();
-        let v = RiskVerdict {
-            severity: Severity::Medium,
-            reason: "test".into(),
-            indicators: vec!["t".into()],
-        };
-        l.append(dummy_action(), v.clone());
-        let s = to_jsonl(&l.entries());
-        let back = from_jsonl(&s);
-        assert_eq!(back.len(), 1);
-        assert_eq!(back[0].action.target, "/etc/passwd");
-    }
 }

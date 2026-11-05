@@ -81,6 +81,8 @@ cat agent_actions.jsonl | ./target/release/sentinel-guard watch --stop-on-deny
 | `High` | Dangerous or injection-indicator present | Sandbox |
 | `Critical` | Credential access, destructive command, or critical injection | Deny |
 
+> **Note on `Sandbox`:** The `Sandbox` decision is a *label* — SENTINEL-GUARD does not perform actual OS-level isolation (containers, seccomp, chroot). It signals to the caller that the action should be routed through a sandboxed execution environment before proceeding. The caller is responsible for enforcing the sandbox.
+
 ## Security model
 
 - **Local-first** — no telemetry, no account, nothing leaves your machine.

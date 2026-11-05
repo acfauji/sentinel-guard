@@ -2,6 +2,7 @@ use crate::guardrail::{evaluate, Decision};
 use crate::ledger::{Ledger, LedgerEntry};
 use crate::model::AgentAction;
 use crate::shield::scan;
+use anyhow::{Context, Result};
 use clap::Parser;
 use std::fs;
 use std::io::{self, Read, BufRead};
@@ -20,11 +21,17 @@ enum Cli {
     Analyze {
         #[arg(short, long)]
         input: Option<String>,
+        /// JSON action (positional)
+        #[arg(value_name = "JSON")]
+        positional: Option<String>,
     },
     /// Scan a string for injection.
     Shield {
         #[arg(short, long)]
         input: Option<String>,
+        /// Text to scan (positional)
+        #[arg(value_name = "TEXT")]
+        positional: Option<String>,
     },
     /// Ledger commands.
     Ledger {
@@ -43,19 +50,22 @@ enum LedgerCmd {
 
 pub fn run() {
     let cli = Cli::parse();
-
-    match cli {
+    let result = match cli {
         Cli::Watch { stop_on_deny } => run_watch(stop_on_deny),
-        Cli::Analyze { input } => run_analyze(input),
-        Cli::Shield { input } => run_shield(input),
+        Cli::Analyze { input, positional } => run_analyze(input.or(positional)),
+        Cli::Shield { input, positional } => run_shield(input.or(positional)),
         Cli::Ledger { cmd } => match cmd {
             LedgerCmd::Verify { file } => run_ledger_verify(&file),
             LedgerCmd::Append { file, action } => run_ledger_append(&file, &action),
         },
+    };
+    if let Err(e) = result {
+        eprintln!("error: {:#}", e);
+        std::process::exit(1);
     }
 }
 
-fn run_watch(stop_on_deny: bool) {
+fn run_watch(stop_on_deny: bool) -> Result<()> {
     let mut ledger = Ledger::new();
     let mut stdin = io::stdin().lock();
 
@@ -87,9 +97,10 @@ fn run_watch(stop_on_deny: bool) {
         ledger.append(action.clone(), decision.verdict.clone());
 
         println!(
-            "[{}] {} | severity={} | reason='{}' | injection={}",
+            "[{}] {} | decision={} | severity={} | reason='{}' | injection={}",
             action.kind,
             action.target,
+            decision.decision.label(),
             decision.verdict.severity.label(),
             decision.reason,
             decision
@@ -109,36 +120,33 @@ fn run_watch(stop_on_deny: bool) {
         Ok(()) => eprintln!("[ledger] verified: {} entries intact", ledger.entries().len()),
         Err(e) => eprintln!("[ledger] CORRUPT: {}", e),
     }
+    Ok(())
 }
 
-fn run_analyze(input: Option<String>) {
+fn run_analyze(input: Option<String>) -> Result<()> {
     let text = match input {
         Some(s) => s,
         None => {
             let mut s = String::new();
-            io::stdin().read_to_string(&mut s).unwrap_or_default();
+            io::stdin().read_to_string(&mut s).context("read stdin")?;
             s.trim().to_string()
         }
     };
 
-    let action: AgentAction = match serde_json::from_str(&text) {
-        Ok(a) => a,
-        Err(e) => {
-            eprintln!("invalid JSON: {}", e);
-            std::process::exit(1);
-        }
-    };
+    let action: AgentAction = serde_json::from_str(&text)
+        .context("invalid action JSON")?;
 
     let decision = evaluate(&action);
-    println!("{}", serde_json::to_string_pretty(&decision).unwrap());
+    println!("{}", serde_json::to_string_pretty(&decision).context("serialize decision")?);
+    Ok(())
 }
 
-fn run_shield(input: Option<String>) {
+fn run_shield(input: Option<String>) -> Result<()> {
     let text = match input {
         Some(s) => s,
         None => {
             let mut s = String::new();
-            io::stdin().read_to_string(&mut s).unwrap_or_default();
+            io::stdin().read_to_string(&mut s).context("read stdin")?;
             s.trim().to_string()
         }
     };
@@ -151,23 +159,16 @@ fn run_shield(input: Option<String>) {
             println!("{:?} | {}", f.severity, f.pattern);
         }
     }
+    Ok(())
 }
 
-fn run_ledger_verify(file: &str) {
-    let text = match fs::read_to_string(file) {
-        Ok(t) => t,
-        Err(e) => {
-            eprintln!("read ledger file: {}", e);
-            std::process::exit(1);
-        }
-    };
-    let entries: Vec<LedgerEntry> = match serde_json::from_str(&text) {
-        Ok(e) => e,
-        Err(e) => {
-            eprintln!("parse ledger file: {}", e);
-            std::process::exit(1);
-        }
-    };
+fn run_ledger_verify(file: &str) -> Result<()> {
+    let text = fs::read_to_string(file)
+        .with_context(|| format!("read ledger file: {}", file))?;
+
+    let entries: Vec<LedgerEntry> = serde_json::from_str(&text)
+        .context("parse ledger file")?;
+
     let l = Ledger { entries };
     match l.verify() {
         Ok(()) => println!("ledger OK: {} entries verified", l.entries().len()),
@@ -176,41 +177,29 @@ fn run_ledger_verify(file: &str) {
             std::process::exit(1);
         }
     }
+    Ok(())
 }
 
-fn run_ledger_append(file: &str, action: &str) {
+fn run_ledger_append(file: &str, action: &str) -> Result<()> {
     let text = fs::read_to_string(file).unwrap_or_default();
     let mut l: Ledger = if text.trim().is_empty() {
         Ledger { entries: Vec::new() }
     } else {
-        match serde_json::from_str(&text) {
-            Ok(entries) => Ledger { entries },
-            Err(e) => {
-                eprintln!("parse ledger file: {}", e);
-                std::process::exit(1);
-            }
-        }
+        serde_json::from_str(&text).context("parse ledger file")?
     };
-    let action: AgentAction = match serde_json::from_str(action) {
-        Ok(a) => a,
-        Err(e) => {
-            eprintln!("invalid action JSON: {}", e);
-            std::process::exit(1);
-        }
-    };
+    let action: AgentAction = serde_json::from_str(action)
+        .context("invalid action JSON")?;
     let verdict = evaluate(&action);
     l.append(action, verdict.verdict);
-    let out = serde_json::to_string_pretty(&l.entries()).unwrap();
+    let out = serde_json::to_string_pretty(&l.entries())
+        .context("serialize ledger")?;
     // Atomic write: write to temp file, then rename
     let tmp_path = format!("{}.tmp", file);
-    if let Err(e) = fs::write(&tmp_path, &out) {
-        eprintln!("write ledger file: {}", e);
-        std::process::exit(1);
-    }
-    if let Err(e) = fs::rename(&tmp_path, file) {
-        eprintln!("rename ledger file: {}", e);
+    fs::write(&tmp_path, &out).context("write ledger file")?;
+    fs::rename(&tmp_path, file).map_err(|e| {
         let _ = fs::remove_file(&tmp_path);
-        std::process::exit(1);
-    }
+        anyhow::anyhow!("rename ledger file: {}", e)
+    })?;
     println!("appended");
+    Ok(())
 }

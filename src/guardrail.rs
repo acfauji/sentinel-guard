@@ -77,7 +77,7 @@ mod tests {
     }
 
     #[test]
-    fn sandbox_high() {
+    fn deny_env_file() {
         let r = evaluate(&a("read_file", "/home/user/.env"));
         assert_eq!(r.decision, Decision::Deny);
     }

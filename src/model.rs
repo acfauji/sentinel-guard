@@ -46,13 +46,4 @@ pub struct RiskVerdict {
     pub indicators: Vec<String>,
 }
 
-/// A single ledger entry (hash-chained).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LedgerEntry {
-    pub index: u64,
-    pub timestamp: String,
-    pub action: AgentAction,
-    pub verdict: RiskVerdict,
-    pub prev_hash: String,
-    pub hash: String,
-}
+// LedgerEntry is defined in ledger.rs (single source of truth).
